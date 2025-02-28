@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+// Configure Vercel serverless function with longer timeout
+export const runtime = 'edge';
+// Note: Edge runtime has a maximum timeout of 30 seconds on Vercel's free tier
+export const maxDuration = 30; // Set maximum duration to 30 seconds
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
+  timeout: 25000, // 25 second timeout (to ensure we stay under the 30s Edge limit)
 });
 
 export async function POST(request: Request) {
@@ -19,108 +25,105 @@ export async function POST(request: Request) {
 
     console.log('Generating journey with prompt:', prompt);
 
-    // Prepare the system message with instructions on how to format the journey
+    // Simplified system message to reduce token count while maintaining essential instructions
     const systemMessage = `
       You are an expert in creating customer journeys for marketing automation. 
-      Generate a detailed journey based on the user's prompt.
+      Generate a concise journey based on the user's prompt.
       
-      Your response should be a JSON object with the following structure:
+      Your response should be a JSON object with nodes and edges.
+      
+      Node structure:
       {
-        "nodes": [
-          {
-            "id": "string",
-            "type": "entrance|push|email|sms|inApp|wait|branch|split|outcome|webhook|exit",
-            "position": { "x": number, "y": number },
-            "data": {
-              "label": "string",
-              "message": "string (for message types)",
-              "subject": "string (for email)",
-              "content": "string (for email)",
-              "duration": "string (for wait)",
-              "condition": "string (for branch)",
-              "status": "complete|incomplete",
-              // Additional fields based on node type
-            }
-          }
-        ],
-        "edges": [
-          {
-            "id": "string",
-            "source": "string (node id)",
-            "target": "string (node id)",
-            "label": "string (optional)"
-          }
-        ]
+        "id": "string",
+        "type": "entrance|push|email|sms|inApp|wait|branch|split|outcome|webhook|exit",
+        "position": { "x": number, "y": number },
+        "data": {
+          "label": "string",
+          "message": "string (for message types)",
+          "subject": "string (for email)",
+          "content": "string (for email)",
+          "duration": "string (for wait)",
+          "condition": "string (for branch)",
+          "status": "complete|incomplete"
+        }
       }
       
-      IMPORTANT GUIDELINES:
-      1. For entrance nodes, include a "filterCondition" field in the data object to specify the audience criteria
-         (e.g., "Last purchase > 45 days ago?") rather than creating a separate filter node.
-      2. Do not create separate filter nodes - instead, incorporate filter conditions directly into the entrance node.
+      Edge structure:
+      {
+        "id": "string",
+        "source": "string (node id)",
+        "target": "string (node id)",
+        "label": "string (optional)"
+      }
       
-      IMPORTANT LAYOUT GUIDELINES:
-      1. Create a clean, vertical flow with nodes centered along a vertical axis (x=400)
-      2. Use increased vertical spacing between nodes (y positions should increase by 220 for each level)
-      3. For branch nodes:
-         - Position "Yes/True" path nodes to the right (x=700)
-         - Position "No/False" path nodes to the left (x=100)
-         - Ensure branches reconnect in a symmetrical way
-         - When branches reconnect, ensure the reconnection node is perfectly centered (x=400)
-      4. Keep the journey visually balanced and symmetrical
-      5. Always start with an entrance node and end with at least one exit node
-      6. Make sure all nodes are connected with appropriate edges
-      7. Be creative but realistic with the journey design
-      8. Ensure that parallel branches have the same number of nodes when possible for visual balance
-      9. When branches split and later reconnect, make them symmetrical on both sides
-      10. Maintain consistent spacing between nodes both vertically and horizontally
-      11. All nodes in the main flow (not part of branches) should be perfectly centered at x=400
+      GUIDELINES:
+      1. Include "filterCondition" in entrance nodes
+      2. Center main flow nodes at x=400
+      3. Use 220px vertical spacing
+      4. Position "Yes" branches at x=700, "No" branches at x=100
+      5. Keep branches symmetrical
+      6. Start with entrance, end with exit
+      7. Ensure all nodes are connected
+      8. Add "Yes" and "No" labels to edges from branch nodes
+      9. Keep the journey simple with 5-8 nodes maximum
       
-      The client-side will further optimize the layout, but providing a good initial structure helps.
+      RESPOND ONLY WITH VALID JSON.
     `;
 
-    // Call OpenAI API
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-      });
-
-      // Extract the journey JSON from the response
-      const journeyText = completion.choices[0].message.content || '';
-      console.log('Received response from OpenAI:', journeyText.substring(0, 200) + '...');
-      
-      // Parse the JSON response
-      let journey;
+    // Call OpenAI API with retry logic
+    let completion;
+    let retries = 0;
+    const maxRetries = 1; // Reduce max retries to save time
+    
+    while (retries <= maxRetries) {
       try {
-        // Extract JSON if it's wrapped in markdown code blocks
-        const jsonMatch = journeyText.match(/```json\n([\s\S]*?)\n```/) || 
-                          journeyText.match(/```\n([\s\S]*?)\n```/) ||
-                          [null, journeyText];
-        
-        const jsonString = jsonMatch[1] || journeyText;
-        journey = JSON.parse(jsonString);
-        console.log('Successfully parsed journey JSON');
+        completion = await openai.chat.completions.create({
+          model: 'gpt-3.5-turbo', // Use a faster model to reduce timeout risk
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1500, // Reduce token count to speed up response
+        });
+        break; // If successful, exit the retry loop
       } catch (error) {
-        console.error('Failed to parse journey JSON:', error);
-        console.error('Raw journey text:', journeyText);
-        return NextResponse.json(
-          { error: 'Failed to generate valid journey data', details: String(error) },
-          { status: 500 }
-        );
+        retries++;
+        if (retries > maxRetries) throw error;
+        // Wait before retrying (shorter backoff)
+        await new Promise(resolve => setTimeout(resolve, 500 * retries));
       }
+    }
 
-      return NextResponse.json({ journey });
-    } catch (openaiError) {
-      console.error('OpenAI API error:', openaiError);
+    if (!completion) {
+      throw new Error('Failed to get completion after retries');
+    }
+
+    // Extract the journey JSON from the response
+    const journeyText = completion.choices[0].message.content || '';
+    console.log('Received response from OpenAI:', journeyText.substring(0, 200) + '...');
+    
+    // Parse the JSON response
+    let journey;
+    try {
+      // Extract JSON if it's wrapped in markdown code blocks
+      const jsonMatch = journeyText.match(/```json\n([\s\S]*?)\n```/) || 
+                        journeyText.match(/```\n([\s\S]*?)\n```/) ||
+                        [null, journeyText];
+      
+      const jsonString = jsonMatch[1] || journeyText;
+      journey = JSON.parse(jsonString);
+      console.log('Successfully parsed journey JSON');
+    } catch (error) {
+      console.error('Failed to parse journey JSON:', error);
+      console.error('Raw journey text:', journeyText);
       return NextResponse.json(
-        { error: 'OpenAI API error', details: String(openaiError) },
+        { error: 'Failed to generate valid journey data', details: String(error) },
         { status: 500 }
       );
     }
+
+    return NextResponse.json({ journey });
   } catch (error) {
     console.error('Error generating journey:', error);
     return NextResponse.json(
