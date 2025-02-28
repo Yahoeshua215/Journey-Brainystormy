@@ -13,8 +13,16 @@ export default function Home() {
         <h2 className="text-2xl text-center font-light text-gray-500 pt-4">
           This whole page will be replaced when you run your template path.
         </h2>
+        <div className="mt-6 text-center flex justify-center gap-4">
+          <Link href="/flow" className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+            View React Flow Demo
+          </Link>
+          <Link href="/journey" className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+            Try Journey Builder
+          </Link>
+        </div>
       </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
           <h3 className="text-xl font-semibold">AI Chat App</h3>
           <p className="mt-2 text-sm text-gray-600">
@@ -41,6 +49,26 @@ export default function Home() {
             A voice-based note-taking app with real-time transcription using Deepgram API, 
             Firebase integration for storage, and a clean, simple interface built with Next.js.
           </p>
+        </div>
+        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
+          <h3 className="text-xl font-semibold">React Flow Demo</h3>
+          <p className="mt-2 text-sm text-gray-600">
+            A demonstration of React Flow, a highly customizable library for building node-based UIs,
+            workflow builders, and interactive diagrams.
+          </p>
+          <Link href="/flow" className="mt-3 inline-block text-blue-500 hover:underline">
+            View Demo →
+          </Link>
+        </div>
+        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
+          <h3 className="text-xl font-semibold">Journey Builder</h3>
+          <p className="mt-2 text-sm text-gray-600">
+            Create automated notification journeys for user engagement with a visual flow builder.
+            Supports push notifications, email, SMS, and in-app messages.
+          </p>
+          <Link href="/journey" className="mt-3 inline-block text-green-500 hover:underline">
+            Try Builder →
+          </Link>
         </div>
       </div>
     </main>

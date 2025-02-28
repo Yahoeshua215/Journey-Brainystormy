@@ -24,6 +24,10 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  // Ensure CSS and JS files are properly handled
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
   async rewrites() {
     return [
       {
