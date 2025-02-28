@@ -250,18 +250,19 @@ const availableNodeTypes = [
 interface JourneyBuilderProps {
   className?: string;
   onJourneyChange?: (nodes: Node[], edges: Edge[]) => void;
+  initialPrompt?: string;
 }
 
 // Wrapper component to provide ReactFlow context
-export default function JourneyBuilderWrapper({ className = '', onJourneyChange }: JourneyBuilderProps) {
+export default function JourneyBuilderWrapper({ className = '', onJourneyChange, initialPrompt }: JourneyBuilderProps) {
   return (
     <ReactFlowProvider>
-      <JourneyBuilder className={className} onJourneyChange={onJourneyChange} />
+      <JourneyBuilder className={className} onJourneyChange={onJourneyChange} initialPrompt={initialPrompt} />
     </ReactFlowProvider>
   );
 }
 
-function JourneyBuilder({ className = '', onJourneyChange }: JourneyBuilderProps) {
+function JourneyBuilder({ className = '', onJourneyChange, initialPrompt }: JourneyBuilderProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -273,6 +274,13 @@ function JourneyBuilder({ className = '', onJourneyChange }: JourneyBuilderProps
   const reactFlowInstance = useReactFlow();
   const [aiPromptOpen, setAiPromptOpen] = useState(false);
   const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
+
+  // Auto-open AI prompt modal when initialPrompt is provided
+  useEffect(() => {
+    if (initialPrompt) {
+      setAiPromptOpen(true);
+    }
+  }, [initialPrompt]);
 
   // Notify parent component when journey changes
   useEffect(() => {
@@ -860,6 +868,7 @@ function JourneyBuilder({ className = '', onJourneyChange }: JourneyBuilderProps
           isOpen={aiPromptOpen}
           onClose={() => setAiPromptOpen(false)}
           onGenerateJourney={handleGenerateJourney}
+          initialPrompt={initialPrompt}
         />
       </div>
       
@@ -876,4 +885,6 @@ function JourneyBuilder({ className = '', onJourneyChange }: JourneyBuilderProps
       )}
     </div>
   );
-} 
+}
+
+JourneyBuilder.displayName = 'JourneyBuilder'; 

@@ -1,16 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface AIJourneyPromptProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerateJourney: (prompt: string) => void;
+  initialPrompt?: string;
 }
 
-export default function AIJourneyPrompt({ isOpen, onClose, onGenerateJourney }: AIJourneyPromptProps) {
+export default function AIJourneyPrompt({ isOpen, onClose, onGenerateJourney, initialPrompt }: AIJourneyPromptProps) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Set default example prompt when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // Focus the textarea without setting a default value
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 100);
+    }
+  }, [isOpen]);
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
@@ -53,9 +67,10 @@ export default function AIJourneyPrompt({ isOpen, onClose, onGenerateJourney }: 
         </p>
         
         <textarea
+          ref={textareaRef}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="E.g., Create a re-engagement journey for a shoe store using email, SMS, and in-app messaging to bring back customers who haven't made a purchase in 30 days."
+          placeholder="Create a re-engagement journey for a shoe store using push notifications, emails, and in-app messages to bring back customers who haven't made a purchase in 30 days."
           className="w-full border border-gray-300 rounded-md p-3 h-32 mb-4 focus:ring-2 focus:ring-red-500 focus:border-transparent"
         />
         

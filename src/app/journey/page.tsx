@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
 import JourneyBuilder from '@/components/JourneyBuilder';
 import JourneyAnalytics from '@/components/JourneyAnalytics';
 import JourneyABTest from '@/components/JourneyABTest';
 import { Node, Edge } from 'reactflow';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function JourneyPage() {
+  const searchParams = useSearchParams();
+  const promptParam = searchParams.get('prompt');
+  
   const [journeyName, setJourneyName] = useState('New Engagement Journey');
   const [journeyStatus, setJourneyStatus] = useState<'draft' | 'active' | 'paused' | 'completed'>('draft');
   const [activeTab, setActiveTab] = useState<'builder' | 'analytics'>('builder');
@@ -71,6 +76,11 @@ export default function JourneyPage() {
       <main className="flex h-screen flex-col overflow-hidden">
         <header className="bg-white border-b border-gray-200 py-3 px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <Link href="/" className="text-gray-600 hover:text-gray-900 mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+            </Link>
             <h1 className="text-xl font-semibold text-gray-900">Journey Builder</h1>
             <button
               className="px-3 py-1.5 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors text-sm"
@@ -149,6 +159,7 @@ export default function JourneyPage() {
               <JourneyBuilder 
                 onJourneyChange={handleJourneyChange}
                 className="h-full"
+                initialPrompt={promptParam || undefined}
               />
               {showABTestPanel && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
